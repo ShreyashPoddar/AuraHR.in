@@ -90,5 +90,3 @@ AuraHR features a premium, state-of-the-art "Glassmorphism" design system with:
 - **Dynamic Glows**: CSS-gradient blobs to maintain a futuristic feel.
 
 ---
-
-Developed with ❤️ by **Shreyash Poddar**
