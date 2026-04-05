@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               String            @id @default(uuid())
+  email            String            @unique
+  password         String
+  name             String
+  role             UserRole          @default(CANDIDATE)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  adminProfile     AdminProfile?
+  candidateProfile CandidateProfile?
+  notifications    Notification[]
+}
+
+model AdminProfile {
+  id                   String         @id @default(uuid())
+  userId               String         @unique
+  companyName          String
+  industry             String?
+  isSubscriptionActive Boolean        @default(true)
+  user                 User           @relation(fields: [userId], references: [id])
+  employeeData         EmployeeData[]
+  jobPostings          JobPosting[]
+}
+
+model EmployeeData {
+  id                String       @id @default(uuid())
+  companyId         String
+  name              String
+  email             String
+  salary            Float?
+  role              String
+  skills            String[]
+  yearsOfExperience Int
+  adminProfile      AdminProfile @relation(fields: [companyId], references: [id])
+}
+
+model CandidateProfile {
+  id              String           @id @default(uuid())
+  userId          String           @unique
+  name            String?
+  email           String           @unique
+  institutionName String?
+  gpa             Float?
+  skills          String[]
+  githubUrl       String?
+  linkedinUrl     String?
+  user            User             @relation(fields: [userId], references: [id])
+  applications    JobApplication[]
+}
+
+model JobPosting {
+  id                String           @id @default(uuid())
+  companyId         String
+  roleTitle         String
+  minExperience     Int
+  requiredSkills    String[]
+  expectedSalary    Float?
+  mustHaveSkills    String[]
+  goodToHaveSkills  String[]
+  futureProofSkills String[]
+  gapSkills         String[]
+  applications      JobApplication[]
+  adminProfile      AdminProfile     @relation(fields: [companyId], references: [id])
+}
+
+model JobApplication {
+  id                      String            @id @default(uuid())
+  jobId                   String
+  candidateId             String
+  experience              Int
+  skillsMatchedPercent    Float             @default(0)
+  ranking                 Int?
+  academiaQualified       Boolean           @default(false)
+  testScore               Float?
+  overallRankRound2       Int?
+  finalInterviewQualified Boolean           @default(false)
+  interviewScore          Float?
+  finalRanking            Int?
+  offerGiven              Boolean           @default(false)
+  proctoringViolations    Int               @default(0)
+  status                  ApplicationStatus @default(PENDING)
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  candidate               CandidateProfile  @relation(fields: [candidateId], references: [id])
+  job                     JobPosting        @relation(fields: [jobId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+enum UserRole {
+  ADMIN
+  CANDIDATE
+}
+
+enum ApplicationStatus {
+  PENDING
+  QUALIFIED
+  DISQUALIFIED_CHEATING
+  REJECTED
+  OFFER_GIVEN
+}
