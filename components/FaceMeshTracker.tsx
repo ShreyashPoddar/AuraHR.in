@@ -1,8 +1,14 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { FaceMesh, Results } from "@mediapipe/face_mesh"
-import { Camera } from "@mediapipe/camera_utils"
+
+// Types for MediaPipe (since we'll use window globals)
+declare global {
+  interface Window {
+    FaceMesh: any
+    Camera: any
+  }
+}
 
 interface FaceMeshTrackerProps {
   onViolation: (reason: string) => void
@@ -17,8 +23,10 @@ export default function FaceMeshTracker({ onViolation, applicationId }: FaceMesh
   useEffect(() => {
     if (typeof window === "undefined") return
 
-    const faceMesh = new FaceMesh({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+    if (typeof window === "undefined" || !window.FaceMesh) return
+
+    const faceMesh = new window.FaceMesh({
+      locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
     })
 
     faceMesh.setOptions({
@@ -28,7 +36,7 @@ export default function FaceMeshTracker({ onViolation, applicationId }: FaceMesh
       minTrackingConfidence: 0.5,
     })
 
-    faceMesh.onResults((results: Results) => {
+    faceMesh.onResults((results: any) => {
       if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         const landmarks = results.multiFaceLandmarks[0]
         
@@ -51,8 +59,8 @@ export default function FaceMeshTracker({ onViolation, applicationId }: FaceMesh
       }
     })
 
-    if (videoRef.current) {
-      const camera = new Camera(videoRef.current, {
+    if (videoRef.current && window.Camera) {
+      const camera = new window.Camera(videoRef.current, {
         onFrame: async () => {
           if (videoRef.current) {
             await faceMesh.send({ image: videoRef.current })

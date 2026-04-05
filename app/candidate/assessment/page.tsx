@@ -17,10 +17,13 @@ import {
 } from "lucide-react"
 import { recordViolation } from "@/app/actions/proctoring-actions"
 import { useSearchParams } from "next/navigation"
-import FaceMeshTracker from "@/components/FaceMeshTracker"
-import TranscriptionBridge from "@/components/TranscriptionBridge"
+import dynamic from "next/dynamic"
+import Script from "next/script"
 import { io } from "socket.io-client"
 import { generateAcademiaTest, evaluateAcademiaAnswer } from "@/app/actions/academia-actions"
+
+const FaceMeshTracker = dynamic(() => import("@/components/FaceMeshTracker"), { ssr: false })
+const TranscriptionBridge = dynamic(() => import("@/components/TranscriptionBridge"), { ssr: false })
 
 export default function AssessmentRoom() {
   const [isFullScreen, setIsFullScreen] = useState(false)
@@ -121,6 +124,14 @@ export default function AssessmentRoom() {
 
   return (
     <div className={`fixed inset-0 z-[100] bg-[#050505] flex flex-col font-mono text-[#f5f5f7] ${isFullScreen ? "" : "p-4"}`}>
+      <Script 
+        src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" 
+        strategy="beforeInteractive"
+      />
+      <Script 
+        src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" 
+        strategy="beforeInteractive"
+      />
       <div className="h-14 bg-black/40 backdrop-blur-3xl border-b border-white/10 flex items-center justify-between px-6">
         <div className="flex items-center gap-4">
           <div className="flex items-baseline gap-1 text-xl font-black tracking-tighter">
