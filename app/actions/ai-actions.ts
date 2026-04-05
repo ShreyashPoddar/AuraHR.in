@@ -28,7 +28,7 @@ export async function parseJD(jdText: string, companyId?: string) {
         where: { companyId },
         select: { skills: true }
       })
-      employeeSkills = Array.from(new Set(employees.flatMap(e => e.skills)))
+      employeeSkills = Array.from(new Set(employees.flatMap((e: any) => e.skills)))
     }
 
     const prompt = `
