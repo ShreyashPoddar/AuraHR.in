@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   Video, 
@@ -25,6 +25,14 @@ import { getAvailableSlots, createInterviewSession } from "@/app/actions/schedul
 import { analyzeLiveSpeech } from "@/app/actions/interview-actions"
 
 export default function InterviewRoomPage() {
+  return (
+    <Suspense fallback={<div>Loading Interview Room...</div>}>
+      <InterviewRoomContent />
+    </Suspense>
+  )
+}
+
+function InterviewRoomContent() {
   const [isMicOn, setIsMicOn] = useState(true)
   const [isVidOn, setIsVidOn] = useState(true)
   const [activeRoom, setActiveRoom] = useState(false)

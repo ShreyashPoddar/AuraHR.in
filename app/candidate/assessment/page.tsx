@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   ShieldAlert, 
@@ -26,6 +26,110 @@ const FaceMeshTracker = dynamic(() => import("@/components/FaceMeshTracker"), { 
 const TranscriptionBridge = dynamic(() => import("@/components/TranscriptionBridge"), { ssr: false })
 
 export default function AssessmentRoom() {
+  const [isFullScreen, setIsFullScreen] = useState(false)
+  const [activeLang, setActiveLang] = useState("Python")
+  const [timer, setTimer] = useState(3600) // 1 hour
+  const searchParams = useSearchParams()
+  const applicationId = searchParams.get("id") || "mock-app-id"
+  const socketRef = useRef<any>(null)
+
+  const [questions, setQuestions] = useState<any[]>([])
+  const [currentQIndex, setCurrentQIndex] = useState(0)
+  const [userAnswers, setUserAnswers] = useState<Record<string, string>>({})
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // 1. Fetch Job ID from Application
+    const initTest = async () => {
+      const qs = await generateAcademiaTest("mock-job-id")
+      if (Array.isArray(qs)) {
+        setQuestions(qs)
+      }
+      setIsLoading(false)
+    }
+    
+    initTest()
+
+    // Proctoring Logic
+    socketRef.current = io("http://localhost:3001")
+    socketRef.current.emit("join-room", applicationId)
+
+    const handleViolation = async (reason: string) => {
+      console.warn(`Violation detected: ${reason}`)
+      await recordViolation(applicationId, reason)
+      if (socketRef.current) {
+        socketRef.current.emit("violation-alert", {
+          applicationId,
+          reason,
+          timestamp: new Date().toLocaleTimeString()
+        })
+      }
+    }
+
+    (window as any).handleAuraViolation = handleViolation
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "hidden") {
+        await handleViolation("Tab switch detected")
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    const interval = setInterval(() => setTimer(t => t > 0 ? t - 1 : 0), 1000)
+    
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      clearInterval(interval)
+      if (socketRef.current) socketRef.current.disconnect()
+    }
+  }, [applicationId])
+
+  const handleAnswerChange = (val: string) => {
+    setUserAnswers(prev => ({ ...prev, [questions[currentQIndex].id]: val }))
+  }
+
+  const handleNext = async () => {
+    const q = questions[currentQIndex]
+    const ans = userAnswers[q.id] || ""
+    
+    if (q.type === "short") {
+      evaluateAcademiaAnswer(applicationId, q.question, ans, q.idealAnswer)
+    } else {
+      if (ans === q.correctAnswer) {
+        evaluateAcademiaAnswer(applicationId, q.question, ans, "MCQ Correct")
+      }
+    }
+
+    if (currentQIndex < questions.length - 1) {
+      setCurrentQIndex(currentQIndex + 1)
+    }
+  }
+
+  const fmtTime = (s: number) => {
+    const m = Math.floor(s / 60)
+    const rs = s % 60
+    return `${m}:${rs < 10 ? "0" : ""}${rs}`
+  }
+
+  const currentQ = questions[currentQIndex]
+
+  if (isLoading) return (
+    <div className="fixed inset-0 bg-[#050505] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-6">
+        <div className="w-12 h-12 border-4 border-t-[var(--accent-primary)] border-white/5 rounded-full animate-spin" />
+        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">AuraAI is generating your technical assessment...</div>
+      </div>
+    </div>
+  )
+
+  return (
+    <Suspense fallback={<div>Loading Assessment...</div>}>
+      <AssessmentRoomContent />
+    </Suspense>
+  )
+}
+
+function AssessmentRoomContent() {
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [activeLang, setActiveLang] = useState("Python")
   const [timer, setTimer] = useState(3600) // 1 hour
